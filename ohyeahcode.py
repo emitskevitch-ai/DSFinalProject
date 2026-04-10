@@ -247,16 +247,19 @@ def select_features(X_tr, X_val, X_te, selected_cols):
 
 def main():
     #import data set with pandas
-    water = pd.read_csv("swamp_data_dashboard.csv")
+    water = pd.read_csv("water_quality_allinfo_master.csv")
     #use geopandas to add geometry to dataframe using the longitude and latitude crs="EPSG:4326" communicates the lat/long format
+    
     water_gdf = gpd.GeoDataFrame(water, geometry=gpd.points_from_xy(water['TargetLongitude'], water['TargetLatitude']), crs="EPSG:4326")
 
     #import data set with pandas
     fire = pd.read_csv("facility_fire_protection.csv")
     #use geopandas to add geometry to dataframe using the longitude and latitude crs="EPSG:4326" communicates the lat/long format
+    #hold up! I dont think this is telling us what we want to know. This spreadsheet is the location of the fire station locations, not the 
+    #wildfire instances. But then I don't think this is used again, so may not be an issue. 
     fire_gdf = gpd.GeoDataFrame(fire, geometry=gpd.points_from_xy(fire['Longitude'], fire['Latitude']), crs="EPSG:4326")
 
-    gdb_fires_path = "/Users/matthewkenville/Downloads/fire24_1.gdb"
+    gdb_fires_path = "C:/Users/Val/CS2500/fire24_1.gdb" 
     
     # Load and reproject fire perimeters
     fires = gpd.read_file(gdb_fires_path, engine="pyogrio", layer="firep24_1")
@@ -267,6 +270,49 @@ def main():
 
     print(f"Total water readings: {len(joined)}")
     print(f"Readings near a fire: {joined['FIRE_NAME'].notna().sum()}")
+    print(joined)
+    '''
+    output = pd.DataFrame({
+    "ROW_ID": range(len(joined)),
+    "Water Stations in Fire Perimeters": joined
+    })
+    '''
+    joined.to_csv("Water_Location_predictions.csv", index=False)
+    
+'''
+    water = pd.read_csv("swamp_data_dashboard.csv")
+    fire = pd.read_csv("facility_fire_protection.csv")
+    
+    print("=== WATER COLUMNS ===")
+    print(water.columns.tolist())
+    print("\n=== WATER SHAPE ===")
+    print(water.shape)
+    print("\n=== WATER HEAD ===")
+    print(water.head(2))
+
+    print("\n=== FIRE COLUMNS ===")
+    print(fire.columns.tolist())
+    print("\n=== FIRE SHAPE ===")
+    print(fire.shape)
+    print("\n=== FIRE HEAD ===")
+    print(fire.head(2))
+
+    # see available layers
+    print(pyogrio.list_layers(gdb_fires_path))
+
+    # load the fire perimeters layer
+    fires = gpd.read_file(gdb_fires_path, engine="pyogrio", layer="firep24_1")
+
+    print("\n=== FIRE PERIMETERS COLUMNS ===")
+    print(fires.columns.tolist())
+    print("\n=== SHAPE ===")
+    print(fires.shape)
+    print("\n=== HEAD ===")
+    print(fires.head(2))
+    print("\n=== DATE RANGE ===")
+    print(fires['ALARM_DATE'].min(), "to", fires['ALARM_DATE'].max())
+    '''
+
 
 if __name__ == "__main__":
     main()
