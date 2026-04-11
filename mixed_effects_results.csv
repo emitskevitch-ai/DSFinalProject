@@ -1,0 +1,6 @@
+Analyte,Coefficient,p-value,Significant,Direction,n_readings,n_stations
+Oxygen,-0.0509,0.4838,False,↓ decreases,815802,3802
+Turbidity,1.7127,0.065,False,↑ increases,908143,3399
+Nitrogen,-0.087,0.1167,False,↓ decreases,237983,1703
+pH,-0.0059,0.1722,False,↓ decreases,804858,3792
+Phosphorus as P,0.023,0.0128,True,↑ increases,353975,2550
