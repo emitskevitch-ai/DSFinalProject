@@ -1,0 +1,22 @@
+# Core data manipulation
+pandas
+numpy
+
+# Geospatial operations (spatial joins, coordinate projections, .gdb reading)
+geopandas
+pyogrio
+
+# Plotting
+matplotlib
+
+# Statistical tests (t-tests, etc.)
+scipy
+
+# Statistical models (mixed effects / multilevel models)
+statsmodels
+
+# Machine learning (Random Forest, linear regression, train/test split, scaling)
+scikit-learn
+
+# Generalized Additive Models
+pygam

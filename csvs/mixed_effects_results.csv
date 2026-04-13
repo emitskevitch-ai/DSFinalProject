@@ -4,3 +4,7 @@ Turbidity,1.7127,0.065,False,↑ increases,908143,3399
 Nitrogen,-0.087,0.1167,False,↓ decreases,237983,1703
 pH,-0.0059,0.1722,False,↓ decreases,804858,3792
 Phosphorus as P,0.023,0.0128,True,↑ increases,353975,2550
+Total Organic Carbon,-0.1094,0.0046,True,↓ decreases,99907,531
+Arsenic,-0.7698,0.1579,False,↓ decreases,31907,504
+Cadmium,0.0052,0.929,False,↑ increases,31516,506
+Chromium,0.4517,0.3791,False,↑ increases,32804,527

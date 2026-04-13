@@ -1,0 +1,7 @@
+Analyte,Before,After,% Change,Direction,Importance
+Turbidity,6.457,12.062,86.8,↑,0.2146
+Phosphorus,0.105,0.099,-5.5,↓,0.2126
+pH,7.938,8.025,1.1,↑,0.2038
+Dissolved Oxygen,9.631,9.246,-4.0,↓,0.1893
+Nitrogen,0.378,0.308,-18.6,↓,0.1645
+Total Organic Carbon,1.626,1.641,0.9,↑,0.0152

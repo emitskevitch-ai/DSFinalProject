@@ -2,11 +2,10 @@
 # pipeline.py
 # =============================================================================
 # PURPOSE:
-#   This is the data preparation script. It must be run FIRST before any
-#   analysis scripts. It does two things:
+#   This is the data preparation code. It does two things:
 #
 #   1. CONSOLIDATE RAW DATA — Reads all individual analyte CSV files from the
-#      Analytes/ folder and merges them into a single wide-format master CSV
+#      Analytes/ folder and merges them into a single master CSV
 #      where each row is one water station reading and each column is an analyte.
 #
 #   2. SPATIAL JOIN — Takes the master water quality data and overlays it with
@@ -16,13 +15,13 @@
 #
 # INPUTS:
 #   - Analytes/*.csv         — Raw water quality data, one file per analyte
-#   - fire24_1.gdb           — California fire perimeters geodatabase (2024)
+#   - fire24_1.gdb           — California fire perimeters geodatabase
 #
 # OUTPUTS (all written to csvs/):
 #   - water_quality_allinfo_master.csv   — Master wide-format water quality table
 #   - analyte_units_reference.csv        — Reference table of units per analyte
 #   - stations_within_fires_sameyear.csv — Stations inside a fire perimeter in
-#                                          the same calendar year as the fire
+#                                          the same year as the fire
 #   - all_stations_fire_joined.csv       — All stations with fire info attached
 #                                          (NaN columns where no fire match)
 # =============================================================================
@@ -34,13 +33,13 @@ import geopandas as gpd
 
 # -----------------------------------------------------------------------------
 # PATH SETUP
-# This script lives in "code files/" so we navigate one level up (..) to reach
+# This script lives in "code files/" so we navigate up to reach
 # the project root where fire24_1.gdb and the Analytes/ folder live.
 # All output CSVs go into the csvs/ folder.
 # -----------------------------------------------------------------------------
-_HERE  = os.path.dirname(os.path.abspath(__file__))   # .../code files/
-_ROOT  = os.path.join(_HERE, "..")                     # project root
-_CSVS  = os.path.join(_ROOT, "csvs")                  # output folder for CSVs
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_ROOT = os.path.join(_HERE, "..")
+_CSVS = os.path.join(_ROOT, "csvs")
 
 
 # =============================================================================
@@ -98,7 +97,7 @@ def build_master_water_quality(files):
     # it after the pivot.
     metadata = combined[
         ['StationCode', 'SampleDate', 'StationName',
-         'TargetLatitude', 'TargetLongitude', 'Region']
+            'TargetLatitude', 'TargetLongitude', 'Region']
     ].drop_duplicates()
 
     # --- Pivot to wide format ---
@@ -126,7 +125,7 @@ def build_master_water_quality(files):
     # This makes the table more readable — you always see the station info
     # before the measurement values.
     meta_cols = ['WaterQualityID', 'StationCode', 'StationName',
-                 'TargetLatitude', 'TargetLongitude', 'Region', 'SampleDate']
+                    'TargetLatitude', 'TargetLongitude', 'Region', 'SampleDate']
     analyte_cols = [col for col in master.columns if col not in meta_cols]
     master = master[meta_cols + analyte_cols]
 
@@ -149,9 +148,9 @@ def build_fire_spatial_join(wq):
     physically located inside a fire boundary.
 
     This uses GeoPandas for the spatial operations:
-      - Water stations are converted to Point geometries using their lat/lon.
-      - Fire perimeters are loaded as Polygon geometries from the .gdb file.
-      - A spatial join finds every station/fire combination where the station
+        - Water stations are converted to Point geometries using their lat/lon.
+        - Fire perimeters are loaded as Polygon geometries from the .gdb file.
+        - A spatial join finds every station/fire combination where the station
         falls inside the fire polygon.
 
     We also extract the fire's alarm year and filter to only keep station
@@ -247,8 +246,8 @@ def build_fire_spatial_join(wq):
 def main():
     """
     Runs the full data pipeline:
-      1. Build master water quality CSV from raw analyte files.
-      2. Spatially join water stations with fire perimeters.
+        1. Build master water quality CSV from raw analyte files.
+        2. Spatially join water stations with fire perimeters.
 
     Step 1 must complete before Step 2 because Step 2 reads the CSV that
     Step 1 produces.
