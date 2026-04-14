@@ -181,11 +181,8 @@ for i, short in enumerate(change_analytes[:6]):
 plt.tight_layout()
 plt.savefig(os.path.join(_GRAPHS, "paired_before_after.png"), dpi=150)
 plt.show()
-print("  Graph saved: paired_before_after.png")
-
 # Save the per-fire summary table
 fire_df.to_csv(os.path.join(_CSVS, "fire_paired_results.csv"), index=False)
-print("  CSV saved: fire_paired_results.csv")
 
 
 # =============================================================================
@@ -351,11 +348,8 @@ for i, short in enumerate(plot_analytes):
 plt.tight_layout()
 plt.savefig(os.path.join(_GRAPHS, "four_scenario_comparison.png"), dpi=150)
 plt.show()
-print("  Graph saved: four_scenario_comparison.png")
 
-# Save the 5-year large fires results (most conservative, most interesting scenario)
 df_5yr_large.to_csv(os.path.join(_CSVS, "large_fires_5yr_results.csv"), index=False)
-print("  CSV saved: large_fires_5yr_results.csv")
 
 
 # =============================================================================
@@ -388,5 +382,4 @@ if len(impacted_1month) > 0:
     ].head(10))
 
 impacted_1month.to_csv(os.path.join(_CSVS, "impacted_within_1month.csv"), index=False)
-print("  CSV saved: impacted_within_1month.csv")
 

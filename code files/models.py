@@ -136,23 +136,30 @@ df_model['season_num'] = df_model['month'].map({
 # A high "post_fire" importance means fire timing is one of the best predictors
 # of that analyte's level.
 # =============================================================================
+# Predictors used to explain each analyte's value.
+# post_fire and days_since_fire capture the fire timing effect.
+# log_acres captures fire size. season_num accounts for seasonal variation.
+# Lat/lon and Region capture geographic differences between monitoring stations.
 features = [
-    'post_fire',
-    'days_since_fire',
-    'log_acres',
-    'season_num',
+    'post_fire',       # binary: 0 = before fire, 1 = after fire
+    'days_since_fire', # continuous: how many days before/after the fire date
+    'log_acres',       # log-transformed fire size (log1p to handle zeros)
+    'season_num',      # 0=winter, 1=spring, 2=summer, 3=fall
     'TargetLatitude',
     'TargetLongitude',
     'Region'
 ]
 
-rf_results = []
-feature_importance_all = {}
+rf_results = []          # collects R² and importance scores per analyte
+feature_importance_all = {}  # collects full importance vectors for the heatmap
 
 for analyte in ANALYTES:
-    short = analyte.split(',')[0]
+    short = analyte.split(',')[0]  # e.g. 'Oxygen, Dissolved, Total' → 'Oxygen'
+
+    # Drop rows where either a feature or the analyte value is missing
     df_a = df_model[features + [analyte]].dropna()
 
+    # Skip analytes with too little data to train reliably
     if len(df_a) < 100:
         print(f"\n{short}: not enough data (n={len(df_a)})")
         continue
@@ -160,25 +167,30 @@ for analyte in ANALYTES:
     X = df_a[features]
     y = df_a[analyte]
 
+    # 80/20 train-test split — hold out 20% to evaluate on unseen data
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
     )
 
+    # Cap training size to RF_SAMPLE rows so the model runs in reasonable time
     if len(X_train) > RF_SAMPLE:
         sample_idx = X_train.sample(RF_SAMPLE, random_state=42).index
         X_train = X_train.loc[sample_idx]
         y_train = y_train.loc[sample_idx]
 
+    # n_estimators=20 is fast; increase for better accuracy at the cost of runtime
     model = RandomForestRegressor(n_estimators=20, random_state=42, n_jobs=-1)
     model.fit(X_train, y_train)
 
+    # Evaluate on the held-out test set
     preds = model.predict(X_test)
-    r2 = r2_score(y_test, preds)
+    r2 = r2_score(y_test, preds)  # R² of 1.0 = perfect, 0.0 = no better than mean
 
+    # Feature importance: fraction of variance each predictor explains (sums to 1)
     importances = pd.Series(model.feature_importances_, index=features)
-    top_feature = importances.idxmax()
-    post_fire_imp = importances['post_fire']
-    feature_importance_all[short] = importances
+    top_feature = importances.idxmax()        # which predictor matters most
+    post_fire_imp = importances['post_fire']  # specifically how much fire timing matters
+    feature_importance_all[short] = importances  # store for heatmap later
 
     print(f"\n{short}")
     print(f"  R²:                   {r2:.4f}")
@@ -193,10 +205,14 @@ for analyte in ANALYTES:
         'n': len(df_a)
     })
 
+# Sort by post_fire_importance descending so the most fire-sensitive analytes appear first
 rf_df = pd.DataFrame(rf_results).sort_values('post_fire_importance', ascending=False)
 
+# --- Heatmap: feature importance across all analytes ---
+# Each row is an analyte, each column is a predictor.
+# Darker = that predictor explains more of that analyte's variance.
 if feature_importance_all:
-    imp_df = pd.DataFrame(feature_importance_all).T
+    imp_df = pd.DataFrame(feature_importance_all).T  # analytes as rows, features as columns
     fig, ax = plt.subplots(figsize=(12, 6))
     im = ax.imshow(imp_df.values, aspect='auto', cmap='YlOrRd')
     ax.set_xticks(range(len(features)))
@@ -208,10 +224,8 @@ if feature_importance_all:
     plt.tight_layout()
     plt.savefig(os.path.join(_GRAPHS, "rf_feature_importance.png"), dpi=150)
     plt.show()
-    print("\n  Graph saved: rf_feature_importance.png")
 
 rf_df.to_csv(os.path.join(_CSVS, "random_forest_results.csv"), index=False)
-print("  CSV saved: random_forest_results.csv")
 
 
 # =============================================================================
@@ -304,12 +318,9 @@ for i, analyte in enumerate(ANALYTES):
 plt.tight_layout()
 plt.savefig(os.path.join(_GRAPHS, "gam_effects.png"), dpi=150)
 plt.show()
-print("\n  Graph saved: gam_effects.png")
-
 gam_df = pd.DataFrame(gam_results).sort_values('Post-fire change', ascending=False) if gam_results else pd.DataFrame()
 if not gam_df.empty:
     gam_df.to_csv(os.path.join(_CSVS, "gam_results.csv"), index=False)
-    print("  CSV saved: gam_results.csv")
 
 
 # --- Combined RF + GAM summary ---
@@ -428,9 +439,6 @@ axes[1].set_title('Direction & Magnitude of Change\n(blue = increases, red = dec
 plt.tight_layout()
 plt.savefig(os.path.join(_GRAPHS, "analyte_wildfire_impact.png"), dpi=150)
 plt.show()
-print("\n  Graph saved: analyte_wildfire_impact.png")
-
 clf_results_df.to_csv(os.path.join(_CSVS, "analyte_impact_ranking.csv"), index=False)
-print("  CSV saved: analyte_impact_ranking.csv")
 
 
