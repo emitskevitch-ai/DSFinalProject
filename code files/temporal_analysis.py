@@ -21,6 +21,7 @@
 #
 # OUTPUTS:
 #   Graphs (to graphs/):
+#     - paired_before_after.png        — Per-fire before/after line plot with mean
 #     - four_scenario_comparison.png   — Grouped bar chart: mean change per analyte
 #                                        across 4 scenarios (1yr/5yr × all/large fires)
 #
@@ -168,6 +169,35 @@ for analyte in ANALYTES:
     _, p = stats.ttest_rel(pairs[before_col], pairs[after_col])
     sig = 'significant' if p < 0.05 else 'not significant'
     print(f"  {short}: p={p:.4f} {sig} (n={len(pairs)} fires)")
+
+# --- Visualization: line plot per fire, before → after ---
+# Each thin line is one fire. The red line is the mean across all fires.
+change_analytes = [
+    a.split(',')[0] for a in ANALYTES
+    if f"{a.split(',')[0]}_change" in fire_df.columns
+]
+fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+fig.suptitle('Before vs After Wildfire — Per Fire Perimeter', fontsize=13)
+axes = axes.flatten()
+for i, short in enumerate(change_analytes[:6]):
+    ax = axes[i]
+    before_col = f'{short}_before'
+    after_col = f'{short}_after'
+    if before_col not in fire_df.columns:
+        continue
+    pairs = fire_df[[before_col, after_col, 'Fire']].dropna()
+    for _, row in pairs.iterrows():
+        ax.plot([0, 1], [row[before_col], row[after_col]], 'o-', alpha=0.5, color='steelblue')
+    ax.plot([0, 1], [pairs[before_col].mean(), pairs[after_col].mean()],
+            'o-', color='red', linewidth=3, label='Mean')
+    ax.set_xticks([0, 1])
+    ax.set_xticklabels(['Before', 'After'])
+    ax.set_title(short)
+    ax.legend()
+plt.tight_layout()
+plt.savefig(os.path.join(_GRAPHS, "paired_before_after.png"), dpi=150)
+plt.show()
+print("  Graph saved: paired_before_after.png")
 
 # Save the per-fire summary table
 fire_df.to_csv(os.path.join(_CSVS, "fire_paired_results.csv"), index=False)
