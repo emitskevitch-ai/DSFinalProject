@@ -71,17 +71,11 @@ LARGE_FIRE_THRESHOLD = 50000
 # Rows with no fire match have NaN in FIRE_NAME — drop those to get only stations
 # that fell inside a fire perimeter.
 # =============================================================================
-print("Loading data...")
-
 joined = pd.read_csv(os.path.join(_CSVS, "all_stations_fire_joined.csv"))
 joined = joined.dropna(subset=['FIRE_NAME'])
 joined['SampleDate'] = pd.to_datetime(joined['SampleDate'])
 joined['ALARM_DATE'] = pd.to_datetime(joined['ALARM_DATE'], utc=True).dt.tz_localize(None)
 joined['days_since_fire'] = (joined['SampleDate'] - joined['ALARM_DATE']).dt.days
-
-print(f"  Readings inside any fire perimeter: {len(joined)}")
-print(f"  Unique fires with water stations: {joined['FIRE_NAME'].nunique()}")
-print(f"  Unique water stations affected: {joined['StationCode'].nunique()}")
 
 
 # =============================================================================
@@ -94,10 +88,6 @@ print(f"  Unique water stations affected: {joined['StationCode'].nunique()}")
 # This is the most direct way to see if a specific fire degraded water quality —
 # the same stations, the same fire, just different time windows.
 # =============================================================================
-print("\n" + "=" * 70)
-print("SECTION 1: Paired before/after analysis per fire")
-print("=" * 70)
-
 fire_results = []
 
 for fire_name, fire_group in joined.groupby('FIRE_NAME'):
@@ -137,9 +127,6 @@ print(f"  Fires with both before AND after readings: {len(fire_df)}")
 print(f"\n{fire_df[['Fire', 'GIS_Acres', 'n_before', 'n_after']].to_string(index=False)}")
 
 # --- Average change across all fires ---
-print("\n" + "=" * 70)
-print("Average change across all fires (Before → After 1yr)")
-print("=" * 70)
 for col in [c for c in fire_df.columns if c.endswith('_change')]:
     analyte_name = col.replace('_change', '')
     vals = fire_df[col].dropna()
@@ -153,9 +140,6 @@ for col in [c for c in fire_df.columns if c.endswith('_change')]:
 # A paired t-test compares the before and after means for each fire together,
 # treating each fire as a matched pair. p < 0.05 means the difference is
 # unlikely to be due to chance alone.
-print("\n" + "=" * 70)
-print("Statistical significance — Paired t-tests (p < 0.05 = significant)")
-print("=" * 70)
 for analyte in ANALYTES:
     short = analyte.split(',')[0]
     before_col = f'{short}_before'
@@ -219,10 +203,6 @@ print("  CSV saved: fire_paired_results.csv")
 #
 # Answers: do effects persist beyond 1 year? Are large fires worse?
 # =============================================================================
-print("\n" + "=" * 70)
-print("SECTION 2: Four-scenario comparison (1yr/5yr × all/large fires)")
-print("=" * 70)
-
 def build_fire_results(joined_data, after_days, min_acres=0):
     """
     For each fire with readings both before AND after, computes mean analyte
@@ -285,9 +265,7 @@ def print_scenario_summary(fire_df, label):
     Returns:
         DataFrame summarizing analyte, mean change, p-value, and n fires.
     """
-    print(f"\n{'=' * 70}")
-    print(f"{label}  (n={len(fire_df)} fires)")
-    print(f"{'=' * 70}")
+    print(f"\n{label}  (n={len(fire_df)} fires)")
 
     summary = []
     for analyte in ANALYTES:
@@ -390,10 +368,6 @@ print("  CSV saved: large_fires_5yr_results.csv")
 # This is the strictest definition of "immediately fire-impacted" data —
 # useful as a high-confidence subset for any further analysis.
 # =============================================================================
-print("\n" + "=" * 70)
-print("SECTION 3: One-month post-fire impact filter")
-print("=" * 70)
-
 # Filter to readings taken 0–30 days after the fire start using days_since_fire,
 # which was already computed from the pipeline output
 impacted_1month = joined[
@@ -416,6 +390,3 @@ if len(impacted_1month) > 0:
 impacted_1month.to_csv(os.path.join(_CSVS, "impacted_within_1month.csv"), index=False)
 print("  CSV saved: impacted_within_1month.csv")
 
-print("\n" + "=" * 70)
-print("temporal_analysis.py complete.")
-print("=" * 70)

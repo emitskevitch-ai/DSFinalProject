@@ -64,10 +64,6 @@ def build_master_water_quality(files):
         to the csvs/ folder.
     """
 
-    print("=" * 60)
-    print("STEP 1: Building master water quality table")
-    print("=" * 60)
-
     # --- Load all analyte files and stack them vertically ---
     # Each file has the same columns but covers a different chemical analyte.
     # pd.concat stacks them into one tall DataFrame.
@@ -165,10 +161,6 @@ def build_fire_spatial_join(wq):
         to the csvs/ folder.
     """
 
-    print("\n" + "=" * 60)
-    print("STEP 2: Spatial join — water stations vs fire perimeters")
-    print("=" * 60)
-
     # --- Parse dates and extract the year of each water sample ---
     # We need the year so we can later filter to same-year fire/sample matches.
     wq['SampleDate'] = pd.to_datetime(wq['SampleDate'])
@@ -188,7 +180,6 @@ def build_fire_spatial_join(wq):
     # fire24_1.gdb is an ESRI geodatabase containing polygon shapes of each fire.
     # "firep24_1" is the specific layer inside the geodatabase we want.
     # We reproject to EPSG:4326 to match the water station coordinate system.
-    print("  Loading fire perimeters from fire24_1.gdb ...")
     fires = gpd.read_file(
         os.path.join(_ROOT, "fire24_1.gdb"),
         engine="pyogrio",
@@ -204,7 +195,6 @@ def build_fire_spatial_join(wq):
     # how='left' keeps ALL water station readings, adding fire columns as NaN
     # for stations that don't fall inside any fire perimeter.
     # predicate='within' means the station point must be inside the fire polygon.
-    print("  Running spatial join ...")
     joined = gpd.sjoin(
         water_gdf,
         fires[['FIRE_NAME', 'ALARM_DATE', 'FireYear', 'GIS_ACRES', 'geometry']],
@@ -267,10 +257,6 @@ def main():
     wq = pd.read_csv(os.path.join(_CSVS, "water_quality_allinfo_master.csv"))
     build_fire_spatial_join(wq)
 
-    print("\n" + "=" * 60)
-    print("Pipeline complete. CSVs written to csvs/")
-    print("You can now run temporal_analysis.py and models.py")
-    print("=" * 60)
 
 
 if __name__ == "__main__":

@@ -94,8 +94,6 @@ GAM_SAMPLE = 3000
 # =============================================================================
 # DATA LOADING
 # =============================================================================
-print("Loading data...")
-
 all_joined = pd.read_csv(os.path.join(_CSVS, "all_stations_fire_joined.csv"))
 all_joined['SampleDate'] = pd.to_datetime(all_joined['SampleDate'])
 all_joined['ALARM_DATE'] = pd.to_datetime(
@@ -104,12 +102,6 @@ all_joined['ALARM_DATE'] = pd.to_datetime(
 all_joined['days_since_fire'] = (
     all_joined['SampleDate'] - all_joined['ALARM_DATE']
 ).dt.days
-
-print(f"Total readings: {len(all_joined)}")
-print(f"Before fire: {len(all_joined[all_joined['days_since_fire'] < 0])}")
-print(f"After fire (0-365 days): {len(all_joined[(all_joined['days_since_fire'] >= 0) & (all_joined['days_since_fire'] <= 365)])}")
-print(f"Unique stations: {all_joined['StationCode'].nunique()}")
-print(f"Unique fires: {all_joined['FIRE_NAME'].nunique()}")
 
 
 # =============================================================================
@@ -133,9 +125,6 @@ df_model['season_num'] = df_model['month'].map({
     9: 3, 10: 3, 11: 3
 })
 
-print(f"\nModel dataset size: {len(df_model)}")
-print(f"Unique stations: {df_model['StationCode'].nunique()}")
-
 
 # =============================================================================
 # MODEL 1: RANDOM FOREST REGRESSOR
@@ -147,10 +136,6 @@ print(f"Unique stations: {df_model['StationCode'].nunique()}")
 # A high "post_fire" importance means fire timing is one of the best predictors
 # of that analyte's level.
 # =============================================================================
-print("\n" + "=" * 70)
-print("MODEL 1: Random Forest — Feature Importance")
-print("=" * 70)
-
 features = [
     'post_fire',
     'days_since_fire',
@@ -240,10 +225,6 @@ print("  CSV saved: random_forest_results.csv")
 #   s(0) = days_since_fire, s(1) = log_acres, s(2) = season_num,
 #   s(3) = TargetLatitude,  s(4) = TargetLongitude, s(5) = Region
 # =============================================================================
-print("\n" + "=" * 70)
-print("MODEL 2: GAM — Smooth effect of days since fire on water quality")
-print("=" * 70)
-
 gam_features = [
     'days_since_fire',
     'log_acres',
@@ -332,9 +313,6 @@ if not gam_df.empty:
 
 
 # --- Combined RF + GAM summary ---
-print("\n" + "=" * 70)
-print("COMBINED MODEL SUMMARY")
-print("=" * 70)
 print("\nRandom Forest — sorted by post_fire importance:")
 print(rf_df[['Analyte', 'R²', 'post_fire_importance', 'top_feature']].to_string(index=False))
 print("\nGAM — post-fire effect direction:")
@@ -358,10 +336,6 @@ else:
 # the water quality data. Feature importance tells you which analytes change
 # most distinctly after a fire.
 # =============================================================================
-print("\n" + "=" * 70)
-print("MODEL 3: Random Forest Classifier — Which Analytes Signal Fire?")
-print("=" * 70)
-
 # Reuse df_model (5-year window, fire-matched rows only)
 df_clf = df_model[CLF_ANALYTES + ['post_fire']].copy()
 df_clf = df_clf[df_clf[CLF_ANALYTES].notna().sum(axis=1) >= 3]
@@ -397,10 +371,8 @@ clf_model = RandomForestClassifier(
 clf_model.fit(X_train, y_train)
 
 preds = clf_model.predict(X_test)
-print("\n=== MODEL PERFORMANCE ===")
 print(classification_report(y_test, preds, target_names=['Pre-fire', 'Post-fire']))
 
-print("\n=== CONFUSION MATRIX ===")
 cm = confusion_matrix(y_test, preds)
 print(f"                Predicted Pre  Predicted Post")
 print(f"Actual Pre:     {cm[0,0]:>13}  {cm[0,1]:>13}")
@@ -410,12 +382,10 @@ importances_clf = pd.Series(clf_model.feature_importances_, index=CLF_ANALYTES)
 importances_clf.index = [CLF_SHORT_NAMES[a] for a in CLF_ANALYTES]
 importances_clf = importances_clf.sort_values(ascending=False)
 
-print("\n=== ANALYTE IMPORTANCE — most affected by wildfire ===")
 for analyte, imp in importances_clf.items():
     bar = '█' * int(imp * 200)
     print(f"  {analyte:25s}: {imp:.4f}  {bar}")
 
-print("\n=== MEAN VALUES BEFORE vs AFTER FIRE ===")
 clf_results = []
 for analyte in CLF_ANALYTES:
     before_mean = df_clf[df_clf['post_fire'] == 0][analyte].mean()
@@ -464,6 +434,3 @@ clf_results_df.to_csv(os.path.join(_CSVS, "analyte_impact_ranking.csv"), index=F
 print("  CSV saved: analyte_impact_ranking.csv")
 
 
-print("\n" + "=" * 70)
-print("models.py complete.")
-print("=" * 70)
