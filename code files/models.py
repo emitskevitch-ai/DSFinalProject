@@ -250,9 +250,9 @@ for i, analyte in enumerate(ANALYTES):
         direction = '↑ increases' if change > 0 else '↓ decreases'
 
         print(f"\n{short}")
-        print(f"  R²:               {r2_gam:.4f}")
-        print(f"  Post-fire change: {change:+.4f}  {direction}")
-        print(f"  n readings:       {len(df_a)}")
+        print(f"R²: {r2_gam:.4f}")
+        print(f"Post-fire change: {change:+.4f}  {direction}")
+        print(f"n readings: {len(df_a)}")
 
         gam_results.append({
             'Analyte': short,
@@ -263,8 +263,6 @@ for i, analyte in enumerate(ANALYTES):
         })
 
     except Exception as e:
-        # GAMs can fail if the data is too sparse or has near-zero variance.
-        # Print the error and mark the subplot rather than crashing the whole script.
         traceback.print_exc()
         axes[i].set_title(f"{short}\n(model failed)")
 
@@ -277,7 +275,6 @@ gam_df = pd.DataFrame(gam_results).sort_values('Post-fire change', ascending=Fal
 if not gam_df.empty:
     gam_df.to_csv(os.path.join(_CSVS, "gam_results.csv"), index=False)
 
-
 # --- Combined RF + GAM summary ---
 print("\nRandom Forest — sorted by post_fire importance:")
 print(rf_df[['Analyte', 'R²', 'top_feature']].to_string(index=False))
@@ -286,7 +283,6 @@ if not gam_df.empty:
     print(gam_df[['Analyte', 'R²', 'Post-fire change', 'Direction']].to_string(index=False))
 else:
     print("No GAM models succeeded — check errors above")
-
 
 # MODEL 3: RANDOM FOREST CLASSIFIER
 # This model flips the question: instead of predicting analyte values from fire
@@ -321,14 +317,8 @@ X = df_clf[CLF_ANALYTES]
 y = df_clf['post_fire']  # binary target: 0 = pre-fire, 1 = post-fire
 
 # StandardScaler normalizes each analyte to mean=0, std=1.
-# Random forests don't technically require scaling, but it ensures analytes
-# measured on very different scales (e.g. turbidity vs pH) are comparable
-# when computing feature importance.
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
-
-# stratify=y preserves the pre/post class ratio in both train and test sets,
-# which matters when classes are imbalanced.
 X_train, X_test, y_train, y_test = train_test_split(
     X_scaled, y, test_size=0.2, random_state=42, stratify=y
 )
@@ -340,8 +330,6 @@ if len(X_train) > 10000:
     X_train = X_train[idx]
     y_train = y_train.iloc[idx]
 
-# class_weight='balanced' automatically upweights the minority class during training,
-# compensating for any imbalance between pre-fire and post-fire readings.
 clf_model = RandomForestClassifier(
     n_estimators=100,     # 100 trees gives stable importance estimates
     random_state=42,
@@ -353,8 +341,6 @@ clf_model.fit(X_train, y_train)
 preds = clf_model.predict(X_test)
 
 # classification_report shows precision, recall, and F1 for each class.
-# Precision = of all predicted post-fire, how many actually were?
-# Recall = of all actual post-fire, how many did we catch?
 print(classification_report(y_test, preds, target_names=['Pre-fire', 'Post-fire']))
 
 # Confusion matrix: rows = actual class, columns = predicted class.
@@ -367,7 +353,6 @@ print(f"Actual Pre:     {cm[0,0]:>13}  {cm[0,1]:>13}")
 print(f"Actual Post:    {cm[1,0]:>13}  {cm[1,1]:>13}")
 
 # Feature importance: how much each analyte contributed to the classification decision.
-# Higher = that analyte's value changed more distinctly between pre and post fire.
 importances_clf = pd.Series(clf_model.feature_importances_, index=CLF_ANALYTES)
 importances_clf.index = [CLF_SHORT_NAMES[a] for a in CLF_ANALYTES]  # use short display names
 importances_clf = importances_clf.sort_values(ascending=False)
@@ -377,9 +362,6 @@ for analyte, imp in importances_clf.items():
     bar = '█' * int(imp * 200)
     print(f"  {analyte:25s}: {imp:.4f}  {bar}")
 
-# For each analyte, compute the actual mean values before and after the fire
-# and the % change. This is separate from importance — it tells us the direction
-# and magnitude of the real-world change, not just how useful it was for classification.
 clf_results = []
 for analyte in CLF_ANALYTES:
     before_mean = df_clf[df_clf['post_fire'] == 0][analyte].mean()
@@ -401,9 +383,6 @@ for analyte in CLF_ANALYTES:
 clf_results_df = pd.DataFrame(clf_results).sort_values('Importance', ascending=False)
 
 # --- Visualization: two side-by-side horizontal bar charts ---
-# Left panel: feature importance (which analytes best distinguish pre vs post fire)
-# Right panel: % change (how much each analyte actually changed, and in which direction)
-# Blue = increased after fire, red = decreased after fire
 fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 fig.suptitle('Which Water Quality Analytes Are Most Affected by Wildfires?', fontsize=13)
 
@@ -430,5 +409,3 @@ plt.tight_layout()
 plt.savefig(os.path.join(_GRAPHS, "analyte_wildfire_impact.png"), dpi=150)
 plt.show()
 clf_results_df.to_csv(os.path.join(_CSVS, "analyte_impact_ranking.csv"), index=False)
-
-

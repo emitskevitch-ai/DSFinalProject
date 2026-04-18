@@ -76,9 +76,7 @@ def build_master_water_quality(files):
     print(f"Saved water_quality_allinfo_master.csv  ({master.shape[0]} rows, {master.shape[1]} columns)")
     print(master.head())
 
-# =============================================================================
 # STEP 2: SPATIAL JOIN — MATCH WATER STATIONS TO FIRE PERIMETERS
-# =============================================================================
 def build_fire_spatial_join(wq):
     """
     Overlays water quality station locations (lat/lon points) on top of
@@ -115,9 +113,7 @@ def build_fire_spatial_join(wq):
     # 2. All stations with fire info attached (NaN where no fire match)
     joined.drop(columns='geometry').to_csv(os.path.join(_CSVS, "all_stations_fire_joined.csv"), index=False)
 
-# =============================================================================
 # MAIN — runs both steps in order
-# =============================================================================
 def main():
     """
     Runs the full data pipeline:
