@@ -1,6 +1,6 @@
-Analyte,R²,post_fire_importance,top_feature,n
-Nitrogen,0.0443,0.0132,TargetLatitude,403
-pH,0.1676,0.0065,days_since_fire,877
-Phosphorus as P,0.0109,0.0026,TargetLatitude,628
-Oxygen,0.1166,0.0012,days_since_fire,874
-Turbidity,0.0047,0.0006,days_since_fire,987
+Analyte,R²,top_feature,n
+pH,0.1878,days_since_fire,877
+Nitrogen,0.0753,TargetLatitude,403
+Phosphorus as P,0.0167,TargetLatitude,628
+Turbidity,0.0049,days_since_fire,987
+Oxygen,-0.0445,days_since_fire,874

@@ -72,10 +72,10 @@ LARGE_FIRE_THRESHOLD = 50000
 # that fell inside a fire perimeter.
 # =============================================================================
 joined = pd.read_csv(os.path.join(_CSVS, "all_stations_fire_joined.csv"))
-joined = joined.dropna(subset=['FIRE_NAME'])
+joined = joined.dropna(subset=['FIRE_NAME'])  # keep only rows that matched a fire perimeter
 joined['SampleDate'] = pd.to_datetime(joined['SampleDate'])
-joined['ALARM_DATE'] = pd.to_datetime(joined['ALARM_DATE'], utc=True).dt.tz_localize(None)
-joined['days_since_fire'] = (joined['SampleDate'] - joined['ALARM_DATE']).dt.days
+joined['ALARM_DATE'] = pd.to_datetime(joined['ALARM_DATE'], utc=True).dt.tz_localize(None)  # strip UTC so both dates are timezone-naive for subtraction
+joined['days_since_fire'] = (joined['SampleDate'] - joined['ALARM_DATE']).dt.days  # negative = before fire, positive = after
 
 
 # =============================================================================
@@ -156,13 +156,14 @@ for analyte in ANALYTES:
 
 # --- Visualization: line plot per fire, before → after ---
 # Each thin line is one fire. The red line is the mean across all fires.
+# Only plot analytes that actually have change data — some may have been skipped above
 change_analytes = [
     a.split(',')[0] for a in ANALYTES
     if f"{a.split(',')[0]}_change" in fire_df.columns
 ]
 fig, axes = plt.subplots(2, 3, figsize=(15, 10))
 fig.suptitle('Before vs After Wildfire — Per Fire Perimeter', fontsize=13)
-axes = axes.flatten()
+axes = axes.flatten()  # flatten 2×3 grid so we can index with axes[i]
 for i, short in enumerate(change_analytes[:6]):
     ax = axes[i]
     before_col = f'{short}_before'
@@ -170,10 +171,10 @@ for i, short in enumerate(change_analytes[:6]):
     if before_col not in fire_df.columns:
         continue
     pairs = fire_df[[before_col, after_col, 'Fire']].dropna()
-    for _, row in pairs.iterrows():
+    for _, row in pairs.iterrows():  # one thin blue line per fire
         ax.plot([0, 1], [row[before_col], row[after_col]], 'o-', alpha=0.5, color='steelblue')
     ax.plot([0, 1], [pairs[before_col].mean(), pairs[after_col].mean()],
-            'o-', color='red', linewidth=3, label='Mean')
+            'o-', color='red', linewidth=3, label='Mean')  # thick red line = average across all fires
     ax.set_xticks([0, 1])
     ax.set_xticklabels(['Before', 'After'])
     ax.set_title(short)
@@ -319,7 +320,7 @@ plot_analytes = ['Oxygen', 'Turbidity', 'Nitrogen', 'pH', 'Phosphorus as P']
 fig, axes = plt.subplots(1, len(plot_analytes), figsize=(16, 5))
 fig.suptitle('Mean Change in Water Quality After Wildfire by Scenario\n(After − Before)', fontsize=13)
 
-x = np.arange(len(scenarios))
+x = np.arange(len(scenarios))  # [0, 1, 2, 3] — x positions for the 4 bars
 
 for i, short in enumerate(plot_analytes):
     ax = axes[i]
@@ -329,18 +330,18 @@ for i, short in enumerate(plot_analytes):
         if change_col in df.columns and not df[change_col].dropna().empty:
             means.append(df[change_col].dropna().mean())
         else:
-            means.append(0)
+            means.append(0)  # no data for this scenario — show zero bar
 
-    colors = ['steelblue' if v >= 0 else 'tomato' for v in means]
+    colors = ['steelblue' if v >= 0 else 'tomato' for v in means]  # blue = increased, red = decreased
     ax.bar(x, means, color=colors, alpha=0.8, edgecolor='white')
-    ax.axhline(0, color='black', linewidth=0.8)
+    ax.axhline(0, color='black', linewidth=0.8)  # zero reference line
     ax.set_title(short, fontsize=10)
     ax.set_xticks(x)
     ax.set_xticklabels([label for _, label in scenarios], fontsize=8)
     if i == 0:
         ax.set_ylabel('Mean Change (After − Before)')
 
-    # Label each bar with its value
+    # Label each bar with its numeric value, offset slightly above/below the bar tip
     for j, v in enumerate(means):
         ax.text(j, v + (max(means) - min(means)) * 0.03 * (1 if v >= 0 else -1),
                 f'{v:+.2f}', ha='center', va='bottom' if v >= 0 else 'top', fontsize=7)
