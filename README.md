@@ -24,8 +24,5 @@ python "code files/temporal_analysis.py"
 python "code files/models.py"
 ```
 
-## Notes
-- `pipeline.py` must run before the other two scripts — it generates the data files they depend on.
-- `temporal_analysis.py` and `models.py` can be run in either order after `pipeline.py`.
 - All output CSVs will be saved to the `csvs/` folder.
 - All output graphs will be saved to the `graphs/` folder.
