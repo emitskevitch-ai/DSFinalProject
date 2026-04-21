@@ -1,6 +1,4 @@
-# =============================================================================
 # temporal_analysis.py
-# =============================================================================
 # PURPOSE:
 #   This script analyzes HOW water quality changes over time relative to
 #   wildfire events. It answers questions like:
@@ -29,7 +27,6 @@
 #     - fire_paired_results.csv        — Per-fire mean before/after values
 #     - large_fires_5yr_results.csv    — 5-year results for large fires only
 #     - impacted_within_1month.csv     — Readings in the first month post-fire
-# =============================================================================
 
 import os
 import numpy as np
@@ -37,61 +34,41 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from scipy import stats
 
-# -----------------------------------------------------------------------------
-# PATH SETUP
-# This script lives in "code files/" — navigate up one level to reach the root.
-# -----------------------------------------------------------------------------
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _ROOT = os.path.join(_HERE, "..")
 _CSVS = os.path.join(_ROOT, "csvs")
 _GRAPHS = os.path.join(_ROOT, "graphs")
 
-# -----------------------------------------------------------------------------
 # ANALYTES TO ANALYZE
-# These are the 6 water quality measures we focus on for temporal analysis.
-# The full analyte names match column headers in the master CSV exactly.
-# -----------------------------------------------------------------------------
 ANALYTES = [
-    'Oxygen, Dissolved, Total', # Dissolved oxygen — drops when water quality degrades
-    'Turbidity, Total', # Cloudiness/suspended particles — increases after fires
-    'Nitrogen, Total, Total', # Nutrients — can spike from ash and soil runoff
-    'pH', # Acidity — fires can affect soil chemistry and runoff
-    'Phosphorus as P, Total', # Nutrients — elevated by ash and erosion
-    'Total Organic Carbon, Total', # Organic matter — increases from burned vegetation runoff
+    'Oxygen, Dissolved, Total', 
+    'Turbidity, Total', 
+    'Nitrogen, Total, Total', 
+    'pH', 
+    'Phosphorus as P, Total', 
+    'Total Organic Carbon, Total', 
 ]
 
 # Fires larger than this (in acres) are considered "large fires" in scenario analysis
 LARGE_FIRE_THRESHOLD = 50000
 
-
-# =============================================================================
 # DATA LOADING
-# =============================================================================
-# pipeline.py already did the spatial join and wrote all_stations_fire_joined.csv.
-# Rows with no fire match have NaN in FIRE_NAME — drop those to get only stations
-# that fell inside a fire perimeter.
-# =============================================================================
 joined = pd.read_csv(os.path.join(_CSVS, "all_stations_fire_joined.csv"))
-joined = joined.dropna(subset=['FIRE_NAME'])  # keep only rows that matched a fire perimeter
+joined = joined.dropna(subset=['FIRE_NAME'])
 joined['SampleDate'] = pd.to_datetime(joined['SampleDate'])
-joined['ALARM_DATE'] = pd.to_datetime(joined['ALARM_DATE'], utc=True).dt.tz_localize(None)  # strip UTC so both dates are timezone-naive for subtraction
-joined['days_since_fire'] = (joined['SampleDate'] - joined['ALARM_DATE']).dt.days  # negative = before fire, positive = after
+joined['ALARM_DATE'] = pd.to_datetime(joined['ALARM_DATE'], utc=True).dt.tz_localize(None)
+joined['days_since_fire'] = (joined['SampleDate'] - joined['ALARM_DATE']).dt.days
 
 
-# =============================================================================
 # SECTION 1: PAIRED BEFORE/AFTER ANALYSIS — PER FIRE PERIMETER
-# =============================================================================
 # For each individual fire, compare the mean analyte values measured at stations
 # BEFORE the fire started vs AFTER (within 1 year). Only fires that have readings
 # in BOTH time windows are included (we need a "before" and "after" to compare).
-#
-# This is the most direct way to see if a specific fire degraded water quality —
-# the same stations, the same fire, just different time windows.
-# =============================================================================
+
 fire_results = []
 
+# Split this fire's readings into before and after (within 1 year)
 for fire_name, fire_group in joined.groupby('FIRE_NAME'):
-    # Split this fire's readings into before and after (within 1 year)
     fire_before = fire_group[fire_group['days_since_fire'] < 0]
     fire_after = fire_group[
         (fire_group['days_since_fire'] >= 0) &
@@ -118,7 +95,7 @@ for fire_name, fire_group in joined.groupby('FIRE_NAME'):
             short = analyte.split(',')[0]
             row[f'{short}_before'] = before_vals.mean()
             row[f'{short}_after'] = after_vals.mean()
-            row[f'{short}_change'] = after_vals.mean() - before_vals.mean() # positive = got worse / higher
+            row[f'{short}_change'] = after_vals.mean() - before_vals.mean()
 
     fire_results.append(row)
 
@@ -137,9 +114,6 @@ for col in [c for c in fire_df.columns if c.endswith('_change')]:
     print(f"  {analyte_name}: {mean_change:+.4f} {direction} (n={len(vals)} fires)")
 
 # --- Paired t-test for statistical significance ---
-# A paired t-test compares the before and after means for each fire together,
-# treating each fire as a matched pair. p < 0.05 means the difference is
-# unlikely to be due to chance alone.
 for analyte in ANALYTES:
     short = analyte.split(',')[0]
     before_col = f'{short}_before'
@@ -148,22 +122,20 @@ for analyte in ANALYTES:
         continue
     pairs = fire_df[[before_col, after_col]].dropna()
     if len(pairs) < 2:
-        print(f"  {short}: not enough paired fires (n={len(pairs)})")
+        print(f"{short}: not enough paired fires (n={len(pairs)})")
         continue
     _, p = stats.ttest_rel(pairs[before_col], pairs[after_col])
     sig = 'significant' if p < 0.05 else 'not significant'
-    print(f"  {short}: p={p:.4f} {sig} (n={len(pairs)} fires)")
+    print(f"{short}: p={p:.4f} {sig} (n={len(pairs)} fires)")
 
 # --- Visualization: line plot per fire, before → after ---
-# Each thin line is one fire. The red line is the mean across all fires.
-# Only plot analytes that actually have change data — some may have been skipped above
 change_analytes = [
     a.split(',')[0] for a in ANALYTES
     if f"{a.split(',')[0]}_change" in fire_df.columns
 ]
 fig, axes = plt.subplots(2, 3, figsize=(15, 10))
 fig.suptitle('Before vs After Wildfire — Per Fire Perimeter', fontsize=13)
-axes = axes.flatten()  # flatten 2×3 grid so we can index with axes[i]
+axes = axes.flatten()
 for i, short in enumerate(change_analytes[:6]):
     ax = axes[i]
     before_col = f'{short}_before'
@@ -171,10 +143,10 @@ for i, short in enumerate(change_analytes[:6]):
     if before_col not in fire_df.columns:
         continue
     pairs = fire_df[[before_col, after_col, 'Fire']].dropna()
-    for _, row in pairs.iterrows():  # one thin blue line per fire
+    for _, row in pairs.iterrows():
         ax.plot([0, 1], [row[before_col], row[after_col]], 'o-', alpha=0.5, color='steelblue')
     ax.plot([0, 1], [pairs[before_col].mean(), pairs[after_col].mean()],
-            'o-', color='red', linewidth=3, label='Mean')  # thick red line = average across all fires
+            'o-', color='red', linewidth=3, label='Mean')
     ax.set_xticks([0, 1])
     ax.set_xticklabels(['Before', 'After'])
     ax.set_title(short)
@@ -186,9 +158,7 @@ plt.show()
 fire_df.to_csv(os.path.join(_CSVS, "fire_paired_results.csv"), index=False)
 
 
-# =============================================================================
 # SECTION 2: FOUR-SCENARIO COMPARISON — GROUPED BAR CHART
-# =============================================================================
 # The primary visualization of this script. Compares mean analyte change
 # across four combinations of time window and fire size:
 #   - 1 year after fire  vs  5 years after fire
@@ -200,7 +170,6 @@ fire_df.to_csv(os.path.join(_CSVS, "fire_paired_results.csv"), index=False)
 # don't compress the smaller changes in pH, oxygen, etc.
 #
 # Answers: do effects persist beyond 1 year? Are large fires worse?
-# =============================================================================
 def build_fire_results(joined_data, after_days, min_acres=0):
     """
     For each fire with readings both before AND after, computes mean analyte
@@ -306,9 +275,6 @@ print_scenario_summary(df_1yr_large, f"1 YEAR AFTER — Large Fires Only (>{LARG
 print_scenario_summary(df_5yr_large, f"5 YEARS AFTER — Large Fires Only (>{LARGE_FIRE_THRESHOLD:,} acres)")
 
 # --- Visualization: grouped bar chart ---
-# One subplot per analyte (each has its own y-axis scale so turbidity doesn't
-# crush the smaller analytes). Four bars per subplot — one per scenario.
-# Bar color shows direction: steelblue = increased, tomato = decreased.
 scenarios = [
     (df_1yr_all, "1yr\nAll Fires"),
     (df_5yr_all, "5yr\nAll Fires"),
@@ -320,7 +286,7 @@ plot_analytes = ['Oxygen', 'Turbidity', 'Nitrogen', 'pH', 'Phosphorus as P']
 fig, axes = plt.subplots(1, len(plot_analytes), figsize=(16, 5))
 fig.suptitle('Mean Change in Water Quality After Wildfire by Scenario\n(After − Before)', fontsize=13)
 
-x = np.arange(len(scenarios))  # [0, 1, 2, 3] — x positions for the 4 bars
+x = np.arange(len(scenarios))
 
 for i, short in enumerate(plot_analytes):
     ax = axes[i]
@@ -330,18 +296,18 @@ for i, short in enumerate(plot_analytes):
         if change_col in df.columns and not df[change_col].dropna().empty:
             means.append(df[change_col].dropna().mean())
         else:
-            means.append(0)  # no data for this scenario — show zero bar
+            means.append(0)
 
-    colors = ['steelblue' if v >= 0 else 'tomato' for v in means]  # blue = increased, red = decreased
+    colors = ['steelblue' if v >= 0 else 'tomato' for v in means]
     ax.bar(x, means, color=colors, alpha=0.8, edgecolor='white')
-    ax.axhline(0, color='black', linewidth=0.8)  # zero reference line
+    ax.axhline(0, color='black', linewidth=0.8)
     ax.set_title(short, fontsize=10)
     ax.set_xticks(x)
     ax.set_xticklabels([label for _, label in scenarios], fontsize=8)
     if i == 0:
         ax.set_ylabel('Mean Change (After − Before)')
 
-    # Label each bar with its numeric value, offset slightly above/below the bar tip
+    # Label each bar with its value
     for j, v in enumerate(means):
         ax.text(j, v + (max(means) - min(means)) * 0.03 * (1 if v >= 0 else -1),
                 f'{v:+.2f}', ha='center', va='bottom' if v >= 0 else 'top', fontsize=7)
@@ -353,16 +319,11 @@ plt.show()
 df_5yr_large.to_csv(os.path.join(_CSVS, "large_fires_5yr_results.csv"), index=False)
 
 
-# =============================================================================
 # SECTION 3: ONE-MONTH IMPACT FILTER
-# =============================================================================
 # Produces a focused dataset of only water readings that were:
 #   1. Taken at a station physically inside a fire perimeter, AND
 #   2. Taken within 30 days of the fire's start date
-#
-# This is the strictest definition of "immediately fire-impacted" data —
-# useful as a high-confidence subset for any further analysis.
-# =============================================================================
+
 # Filter to readings taken 0–30 days after the fire start using days_since_fire,
 # which was already computed from the pipeline output
 impacted_1month = joined[

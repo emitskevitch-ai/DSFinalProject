@@ -121,7 +121,7 @@ def main():
         2. Spatially join water stations with fire perimeters.
     """
     # --- Step 1: Build master water quality table ---
-    analyte_files = glob.glob(os.path.join(_ROOT, "Analytes", "*.csv"))
+    analyte_files = glob.glob(os.path.join(_ROOT, "Analytes_reduced", "*.csv"))
     if not analyte_files:
         print("ERROR: No CSV files found in Analytes/ folder. Check the path.")
         return
