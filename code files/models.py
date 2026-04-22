@@ -30,7 +30,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
-from sklearn.metrics import r2_score, classification_report, confusion_matrix
+from sklearn.metrics import (r2_score, classification_report, confusion_matrix,
+                             accuracy_score, precision_score, recall_score, f1_score)
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from pygam import LinearGAM, s
@@ -212,7 +213,7 @@ axes = axes.flatten()  # flatten to index axes[i] instead of axes[row][col]
 for i, analyte in enumerate(ANALYTES):
     short = analyte.split(',')[0]
     # Drop rows missing any feature or the target analyte
-    df_a = df_model[gam_features + [analyte]].dropna()
+    df_a = df_model[gam_features + [analyte, 'post_fire']].dropna()
     if len(df_a) < 100:
         print(f"\n{short}: not enough data (n={len(df_a)})")
         axes[i].set_title(f"{short}\n(insufficient data)")
@@ -223,6 +224,7 @@ for i, analyte in enumerate(ANALYTES):
     # GAM expects plain numpy arrays, not DataFrames
     X = df_a[gam_features].values
     y = df_a[analyte].values
+    y_true_binary = df_a['post_fire'].values
     try:
         gam = LinearGAM(gam_formula).fit(X, y)
         # Values above 0.2 are considered reasonable for GAMs.
@@ -249,9 +251,22 @@ for i, analyte in enumerate(ANALYTES):
         change = after_effect - before_effect  # positive = analyte increases post-fire
         direction = '↑ increases' if change > 0 else '↓ decreases'
 
+        # Classification metrics: threshold GAM predictions at their median to get
+        # binary pre/post-fire labels, then compare to actual post_fire values.
+        y_pred_cont = gam.predict(X)
+        y_pred_binary = (y_pred_cont >= np.median(y_pred_cont)).astype(int)
+        acc  = accuracy_score(y_true_binary, y_pred_binary)
+        prec = precision_score(y_true_binary, y_pred_binary, average='weighted', zero_division=0)
+        rec  = recall_score(y_true_binary, y_pred_binary, average='weighted', zero_division=0)
+        f1   = f1_score(y_true_binary, y_pred_binary, average='weighted', zero_division=0)
+
         print(f"\n{short}")
         print(f"R²: {r2_gam:.4f}")
         print(f"Post-fire change: {change:+.4f}  {direction}")
+        print(f"Accuracy:  {acc:.4f}")
+        print(f"Precision: {prec:.4f}")
+        print(f"Recall:    {rec:.4f}")
+        print(f"F1:        {f1:.4f}")
         print(f"n readings: {len(df_a)}")
 
         gam_results.append({
@@ -259,6 +274,10 @@ for i, analyte in enumerate(ANALYTES):
             'R²': round(r2_gam, 4),
             'Post-fire change': round(change, 4),
             'Direction': direction,
+            'Accuracy': round(acc, 4),
+            'Precision': round(prec, 4),
+            'Recall': round(rec, 4),
+            'F1': round(f1, 4),
             'n': len(df_a)
         })
 
@@ -274,6 +293,20 @@ plt.show()
 gam_df = pd.DataFrame(gam_results).sort_values('Post-fire change', ascending=False) if gam_results else pd.DataFrame()
 if not gam_df.empty:
     gam_df.to_csv(os.path.join(_CSVS, "gam_results.csv"), index=False)
+
+# --- GAM classification metrics summary ---
+print("\n" + "=" * 70)
+print("GAM Classification Metrics — All Analytes")
+print("=" * 70)
+print(f"  {'Analyte':<28} {'R²':>6} {'Acc':>6} {'Prec':>6} {'Rec':>6} {'F1':>6}")
+print("  " + "-" * 64)
+if not gam_df.empty:
+    for _, row in gam_df.iterrows():
+        print(f"  {row['Analyte']:<28} {row['R²']:>6.4f} {row['Accuracy']:>6.4f} "
+              f"{row['Precision']:>6.4f} {row['Recall']:>6.4f} {row['F1']:>6.4f}")
+else:
+    print("  No GAM results available.")
+print("=" * 70)
 
 # --- Combined RF + GAM summary ---
 print("\nRandom Forest — sorted by post_fire importance:")

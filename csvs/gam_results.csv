@@ -1,6 +1,6 @@
-Analyte,R²,Post-fire change,Direction,n
-Turbidity,0.9912,8.4075,↑ increases,987
-Oxygen,0.9935,0.3178,↑ increases,874
-pH,0.8093,0.0311,↑ increases,877
-Nitrogen,0.8662,0.018,↑ increases,403
-Phosphorus as P,0.433,-0.0096,↓ decreases,628
+Analyte,R²,Post-fire change,Direction,Accuracy,Precision,Recall,F1,n
+Turbidity,0.9912,8.4075,↑ increases,0.5785,0.5991,0.5785,0.5829,987
+Oxygen,0.9935,0.3178,↑ increases,0.5343,0.582,0.5343,0.5457,874
+pH,0.8093,0.0311,↑ increases,0.5986,0.6302,0.5986,0.6051,877
+Nitrogen,0.8662,0.018,↑ increases,0.4814,0.4919,0.4814,0.4842,403
+Phosphorus as P,0.433,-0.0096,↓ decreases,0.5223,0.535,0.5223,0.5253,628
